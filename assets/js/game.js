@@ -1,18 +1,16 @@
 /* ============================================
-   game.js — منطق اللعبة والتحقق من الحل
+   game.js — منطق اللعبة والتحقق الحقيقي
+   يستخدم chess.js للتحقق من صحة النقلة وكش المات
    ============================================ */
 
 const Game = (() => {
   let currentIndex = 0;
   let currentPuzzle = null;
   let selectedSquare = null;
+  let chess = null; // نسخة chess.js للتحقق
 
-  // عناصر DOM
   const els = {};
 
-  /**
-   * تهيئة اللعبة — تُستدعى من main.js
-   */
   function init() {
     els.counter = document.getElementById('puzzle-counter');
     els.instruction = document.getElementById('puzzle-instruction');
@@ -25,9 +23,6 @@ const Game = (() => {
     loadPuzzle(Storage.getCurrent());
   }
 
-  /**
-   * ربط أحداث الأزرار والرقعة
-   */
   function bindEvents() {
     document.getElementById('board').addEventListener('click', onBoardClick);
     els.btnHint.addEventListener('click', showHint);
@@ -35,10 +30,6 @@ const Game = (() => {
     els.btnNext.addEventListener('click', nextPuzzle);
   }
 
-  /**
-   * تحميل لغز حسب الفهرس
-   * @param {number} index
-   */
   function loadPuzzle(index) {
     const puzzle = getPuzzle(index);
     if (!puzzle) {
@@ -51,6 +42,9 @@ const Game = (() => {
     currentPuzzle = puzzle;
     selectedSquare = null;
 
+    // تهيئة محرك الشطرنج بالوضعية
+    chess = new Chess(puzzle.fen);
+
     Board.render(puzzle.fen);
     els.counter.textContent = `${index + 1} / ${getPuzzleCount()}`;
     els.instruction.textContent = puzzle.instruction;
@@ -59,10 +53,6 @@ const Game = (() => {
     Storage.saveCurrent(index);
   }
 
-  /**
-   * عند النقر على مربع
-   * @param {MouseEvent} e
-   */
   function onBoardClick(e) {
     const squareEl = e.target.closest('.square');
     if (!squareEl) return;
@@ -70,7 +60,6 @@ const Game = (() => {
     const squareName = squareEl.dataset.square;
     const piece = Board.getPieceAt(squareName);
 
-    // إذا لم يكن هناك مربع محدد
     if (!selectedSquare) {
       if (piece) {
         selectedSquare = squareName;
@@ -79,39 +68,44 @@ const Game = (() => {
       return;
     }
 
-    // النقر على نفس المربع = إلغاء التحديد
     if (squareName === selectedSquare) {
       selectedSquare = null;
       Board.clearSelection();
       return;
     }
 
-    // محاولة نقل
     attemptMove(selectedSquare, squareName);
   }
 
-  /**
-   * محاولة نقل والتحقق من الصحة
-   * @param {string} from
-   * @param {string} to
-   */
   function attemptMove(from, to) {
-    const sol = currentPuzzle.solution;
+    // التحقق عبر chess.js — هل النقلة قانونية؟
+    const move = chess.move({ from, to, promotion: 'q' });
 
-    if (from === sol.from && to === sol.to) {
-      // ✅ إجابة صحيحة
+    if (!move) {
+      // نقلة غير قانونية
+      Board.markTarget(to, false);
+      setStatus('❌ نقلة غير قانونية', 'error');
+      setTimeout(() => {
+        Board.clearSelection();
+        selectedSquare = null;
+      }, 700);
+      return;
+    }
+
+    // النقلة قانونية — هل تُنتج كش مات؟
+    if (chess.in_checkmate()) {
       Board.movePiece(from, to);
       Board.clearSelection();
       Board.markTarget(to, true);
       selectedSquare = null;
-      setStatus('🎉 أحسنت! نقلة صحيحة', 'success');
-
+      setStatus('🎉 أحسنت! كش مات صحيح', 'success');
       Storage.markSolved(currentIndex);
       els.btnNext.disabled = false;
     } else {
-      // ❌ إجابة خاطئة
+      // نقلة قانونية لكن ليست كش مات — نتراجع
+      chess.undo();
       Board.markTarget(to, false);
-      setStatus('❌ ليست النقلة الصحيحة، حاول مجدداً', 'error');
+      setStatus('❌ ليست كش مات، حاول مجدداً', 'error');
       setTimeout(() => {
         Board.clearSelection();
         selectedSquare = null;
@@ -119,35 +113,22 @@ const Game = (() => {
     }
   }
 
-  /**
-   * عرض تلميح
-   */
   function showHint() {
     setStatus(`💡 ${currentPuzzle.hint}`, '');
   }
 
-  /**
-   * إعادة اللغز من البداية
-   */
   function resetPuzzle() {
     selectedSquare = null;
+    chess = new Chess(currentPuzzle.fen);
     Board.render(currentPuzzle.fen);
     els.btnNext.disabled = true;
     setStatus('', '');
   }
 
-  /**
-   * الانتقال للغز التالي
-   */
   function nextPuzzle() {
     loadPuzzle(currentIndex + 1);
   }
 
-  /**
-   * تعيين رسالة الحالة
-   * @param {string} msg
-   * @param {string} type — 'success' | 'error' | ''
-   */
   function setStatus(msg, type) {
     els.status.textContent = msg;
     els.status.className = 'status-message';
@@ -156,4 +137,3 @@ const Game = (() => {
 
   return { init };
 })();
-
