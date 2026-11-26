@@ -1,12 +1,12 @@
 /* ============================================
    board.js — رسم رقعة الشطرنج وعرض القطع (صور SVG)
+   + إضافة إحداثيات الحواف
    ============================================ */
 
 const Board = (() => {
   const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-  // خريطة تربط رمز القطعة باسم ملف الصورة
   const PIECE_MAP = {
     'K': 'wK', 'Q': 'wQ', 'R': 'wR', 'B': 'wB', 'N': 'wN', 'P': 'wP',
     'k': 'bK', 'q': 'bQ', 'r': 'bR', 'b': 'bB', 'n': 'bN', 'p': 'bP'
@@ -49,12 +49,21 @@ const Board = (() => {
         square.dataset.row = rowIdx;
         square.dataset.col = colIdx;
 
+        // إضافة إحداثيات الحواف
+        // الأحرف (a-h) على الصف السفلي (rowIdx === 7)
+        if (rowIdx === 7) {
+          square.dataset.file = FILES[colIdx];
+        }
+        // الأرقام (1-8) على العمود الأيسر (colIdx === 0)
+        if (colIdx === 0) {
+          square.dataset.rank = RANKS[rowIdx];
+        }
+
         if (pieceChar) {
           const pieceEl = document.createElement('span');
           pieceEl.className = 'piece';
           pieceEl.dataset.piece = pieceChar;
           
-          // استخدام الصورة بدل النص
           const imgName = PIECE_MAP[pieceChar];
           if (imgName) {
             pieceEl.innerHTML = `<img src="assets/img/pieces/${imgName}.svg" alt="${pieceChar}" class="piece-img" />`;

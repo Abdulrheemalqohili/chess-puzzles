@@ -1,14 +1,15 @@
 /* ============================================
-   game.js — منطق اللعبة مع دعم Lichess API
-   يدعم ألغازاً متعددة النقلات
+   game.js — منطق اللعبة مع Lichess API
+   يدعم ألغازاً لا نهائية ومتعددة النقلات
    ============================================ */
 
 const Game = (() => {
   let chess = null;
-  let currentPuzzleData = null; // { fen, solution, lastMove, id }
-  let solutionIndex = 0; // مؤشر في مصفوفة الحل
+  let puzzleData = null;
+  let solutionIndex = 0;
   let selectedSquare = null;
-  let isLocked = false; // منع التفاعل أثناء تحريك الخصم
+  let isLocked = false;
+  let score = 0;
 
   const els = {};
 
@@ -23,94 +24,62 @@ const Game = (() => {
     els.loading = document.getElementById('loading-message');
 
     bindEvents();
-    fetchAndLoadPuzzle(); // ابدأ بجلب لغز
+    fetchPuzzle();
   }
 
   function bindEvents() {
     document.getElementById('board').addEventListener('click', onBoardClick);
     els.btnHint.addEventListener('click', showHint);
     els.btnReset.addEventListener('click', resetPuzzle);
-    els.btnNext.addEventListener('click', fetchAndLoadPuzzle);
-    els.btnNew.addEventListener('click', fetchAndLoadPuzzle);
+    els.btnNext.addEventListener('click', fetchPuzzle);
+    els.btnNew.addEventListener('click', fetchPuzzle);
 
     const btnAgain = document.getElementById('btn-play-again');
     if (btnAgain) btnAgain.addEventListener('click', playAgain);
   }
 
-  // ---------- جلب اللغز من Lichess ----------
-  async function fetchAndLoadPuzzle() {
+  // جلب لغز من Lichess
+  async function fetchPuzzle() {
     setLoading(true);
     setStatus('', '');
     els.btnNext.disabled = true;
+    els.btnHint.disabled = true;
 
     try {
       const res = await fetch('https://lichess.org/api/puzzle/next');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-
-      // تحقق من وجود البيانات المطلوبة
-      if (!data.puzzle || !data.puzzle.fen || !data.puzzle.solution) {
-        throw new Error('بيانات اللغز غير مكتملة');
-      }
-
-      loadPuzzle(data.puzzle);
+      
+      puzzleData = data.puzzle;
+      puzzleData.pgn = data.game.pgn;
+      
+      loadPuzzle();
     } catch (err) {
       console.error('فشل جلب اللغز:', err);
-      setStatus('⚠️ تعذّر جلب لغز من الإنترنت. تحقق من الاتصال أو حاول لاحقاً.', 'error');
-      // في حالة الفشل، جرّب استخدام لغز محلي احتياطي
-      loadFallbackPuzzle();
+      setStatus('⚠️ تعذّر جلب اللغز. تأكد من الإنترنت أو استخدم السيرفر المحلي.', 'error');
     } finally {
       setLoading(false);
     }
   }
 
-  function loadPuzzle(puzzleData) {
-    currentPuzzleData = puzzleData;
+  function loadPuzzle() {
     solutionIndex = 0;
     selectedSquare = null;
     isLocked = false;
-
-    // تهيئة محرك الشطرنج
-    chess = new Chess(puzzleData.fen);
-
-    // تطبيق النقلة الأخيرة للخصم (إن وجدت)
-    // ملاحظة: Lichess fen هو الوضعية *قبل* lastMove
-    // نطبق lastMove يدوياً لجعل الوضعية جاهزة للاعب
-    if (puzzleData.lastMove) {
-      try {
-        const from = puzzleData.lastMove.slice(0, 2);
-        const to = puzzleData.lastMove.slice(2, 4);
-        const promotion = puzzleData.lastMove.length > 4 ? puzzleData.lastMove[4] : undefined;
-        chess.move({ from, to, promotion });
-      } catch (e) {
-        console.warn('فشل تطبيق lastMove:', e);
-      }
-    }
-
-    // عرض الرقعة
-    Board.render(chess.fen());
-    els.counter.textContent = puzzleData.id || '—';
-    els.instruction.textContent = 'اعثر على النقلة الصحيحة'; // يمكن تحسينها لاحقاً باستخدام themes
     els.btnNext.disabled = true;
+    els.btnHint.disabled = false;
     setStatus('', '');
+
+    chess = new Chess();
+    chess.load_pgn(puzzleData.pgn);
+    
+    Board.render(chess.fen());
+    els.counter.textContent = `#${puzzleData.id}`;
+    
+    const turn = chess.turn() === 'w' ? 'الأبيض' : 'الأسود';
+    els.instruction.textContent = `الخصم لعب للتو. دورك (${turn}) — اعثر على النقلة الصحيحة`;
   }
 
-  function loadFallbackPuzzle() {
-    // استخدام أول لغز من PUZZLES المحلي كخطة بديلة
-    if (typeof PUZZLES !== 'undefined' && PUZZLES.length > 0) {
-      const p = PUZZLES[0];
-      loadPuzzle({
-        id: 'محلي',
-        fen: p.fen,
-        solution: [p.solution.from + p.solution.to],
-        lastMove: null,
-      });
-    } else {
-      setStatus('⚠️ لا توجد ألغاز متاحة', 'error');
-    }
-  }
-
-  // ---------- تفاعل المستخدم ----------
   function onBoardClick(e) {
     if (isLocked) return;
     const squareEl = e.target.closest('.square');
@@ -121,8 +90,15 @@ const Game = (() => {
 
     if (!selectedSquare) {
       if (piece) {
-        selectedSquare = squareName;
-        Board.selectSquare(squareName);
+        const isWhitePiece = piece === piece.toUpperCase();
+        const isBlackPiece = piece === piece.toLowerCase();
+        const turn = chess.turn();
+        
+        // الإصلاح: نتحقق أن القطعة تنتمي للاعب الذي عليه الدور
+        if ((turn === 'w' && isWhitePiece) || (turn === 'b' && isBlackPiece)) {
+          selectedSquare = squareName;
+          Board.selectSquare(squareName);
+        }
       }
       return;
     }
@@ -137,14 +113,13 @@ const Game = (() => {
   }
 
   function attemptMove(from, to) {
-    if (!currentPuzzleData || !currentPuzzleData.solution) return;
+    if (!puzzleData || !puzzleData.solution) return;
 
-    const expectedMoveUci = currentPuzzleData.solution[solutionIndex];
-    const userMoveUci = from + to;
+    const expectedMove = puzzleData.solution[solutionIndex];
+    const userMove = from + to;
 
-    // التحقق: هل النقلة تطابق المتوقع؟
-    if (userMoveUci !== expectedMoveUci && !userMoveUci.startsWith(expectedMoveUci)) {
-      // نقلة خاطئة
+    // التحقق من النقلة
+    if (!expectedMove.startsWith(userMove)) {
       Board.markTarget(to, false);
       setStatus('❌ ليست النقلة الصحيحة', 'error');
       setTimeout(() => {
@@ -154,8 +129,14 @@ const Game = (() => {
       return;
     }
 
-    // النقلة صحيحة
-    const move = chess.move({ from, to, promotion: 'q' });
+    // تنفيذ النقلة
+    let move = chess.move({ from, to, promotion: 'q' });
+    
+    if (!move && expectedMove.length > 4) {
+        const promotionPiece = expectedMove[4];
+        move = chess.move({ from, to, promotion: promotionPiece });
+    }
+
     if (!move) {
       setStatus('❌ نقلة غير قانونية', 'error');
       Board.clearSelection();
@@ -168,32 +149,23 @@ const Game = (() => {
     selectedSquare = null;
     solutionIndex++;
 
-    // هل انتهى الحل؟
-    if (solutionIndex >= currentPuzzleData.solution.length) {
-      // تم حل اللغز
+    if (solutionIndex >= puzzleData.solution.length) {
       setStatus('🎉 أحسنت! لغز مكتمل', 'success');
       els.btnNext.disabled = false;
-      Storage.markSolved(currentPuzzleData.id);
-      updateProgress();
-      if (Storage.getSolved().length >= 5) {
-        setTimeout(showWinModal, 500);
-      }
+      incrementScore();
       return;
     }
 
-    // تطبيق رد الخصم التالي
-    applyOpponentMove();
+    playOpponentMove();
   }
 
-  function applyOpponentMove() {
-    if (solutionIndex >= currentPuzzleData.solution.length) return;
+  function playOpponentMove() {
+    if (solutionIndex >= puzzleData.solution.length) return;
 
-    const oppMoveUci = currentPuzzleData.solution[solutionIndex];
-    if (!oppMoveUci) return;
-
+    const oppMoveUci = puzzleData.solution[solutionIndex];
     const from = oppMoveUci.slice(0, 2);
     const to = oppMoveUci.slice(2, 4);
-    const promotion = oppMoveUci.length > 4 ? oppMoveUci[4] : undefined;
+    const promotion = oppMoveUci.length > 4 ? oppMoveUci[4] : 'q';
 
     isLocked = true;
     setStatus('⏳ الخصم يلعب...', '');
@@ -201,48 +173,42 @@ const Game = (() => {
     setTimeout(() => {
       const move = chess.move({ from, to, promotion });
       if (move) {
-        Board.movePiece(from, to);
+        Board.render(chess.fen()); // إعادة رسم الرقعة بالكامل
       }
+      
       solutionIndex++;
       isLocked = false;
 
-      // هل انتهى الحل بعد نقلة الخصم؟
-      if (solutionIndex >= currentPuzzleData.solution.length) {
+      if (solutionIndex >= puzzleData.solution.length) {
         setStatus('🎉 أحسنت! لغز مكتمل', 'success');
         els.btnNext.disabled = false;
-        Storage.markSolved(currentPuzzleData.id);
-        updateProgress();
-        if (Storage.getSolved().length >= 5) {
-          setTimeout(showWinModal, 500);
-        }
+        incrementScore();
       } else {
-        setStatus('🎯 دورك الآن', '');
+        const turn = chess.turn() === 'w' ? 'الأبيض' : 'الأسود';
+        setStatus(`🎯 دورك الآن (${turn})`, '');
       }
-    }, 600); // تأخير بسيط لمحاكاة تفكير الخصم
+    }, 500);
   }
 
-  // ---------- دوال مساعدة ----------
   function showHint() {
-    if (!currentPuzzleData || !currentPuzzleData.solution) return;
-    const nextMove = currentPuzzleData.solution[solutionIndex];
+    if (!puzzleData || !puzzleData.solution) return;
+    const nextMove = puzzleData.solution[solutionIndex];
     if (nextMove) {
       const from = nextMove.slice(0, 2);
       const to = nextMove.slice(2, 4);
       setStatus(`💡 جرّب النقلة من ${from} إلى ${to}`, '');
-    } else {
-      setStatus('✅ لا توجد نقلات متبقية', '');
     }
   }
 
   function resetPuzzle() {
-    if (!currentPuzzleData) return;
-    loadPuzzle(currentPuzzleData);
+    if (puzzleData) loadPuzzle();
   }
 
   function playAgain() {
-    Storage.reset();
     hideWinModal();
-    fetchAndLoadPuzzle();
+    score = 0;
+    incrementScore(); // تصفير العداد
+    fetchPuzzle();
   }
 
   function setStatus(msg, type) {
@@ -252,23 +218,13 @@ const Game = (() => {
   }
 
   function setLoading(isLoading) {
-    if (els.loading) {
-      els.loading.classList.toggle('hidden', !isLoading);
-    }
-    if (isLoading) {
-      els.btnNext.disabled = true;
-      els.btnNew.disabled = true;
-    } else {
-      els.btnNew.disabled = false;
-    }
+    if (els.loading) els.loading.classList.toggle('hidden', !isLoading);
+    if (els.btnNew) els.btnNew.disabled = isLoading;
   }
 
-  function updateProgress() {
-    const solved = Storage.getSolved().length;
-    const fill = document.getElementById('progress-fill');
+  function incrementScore() {
     const text = document.getElementById('progress-text');
-    if (fill) fill.style.width = Math.min(solved * 20, 100) + '%';
-    if (text) text.textContent = solved + ' / 5';
+    if (text) text.textContent = `🏆 ${score}`;
   }
 
   function showWinModal() {
@@ -281,5 +237,5 @@ const Game = (() => {
     if (modal) modal.classList.add('hidden');
   }
 
-  return { init, playAgain };
+  return { init, playAgain, incrementScore };
 })();
