@@ -24,7 +24,12 @@
       <p id="puzzle-instruction" class="puzzle-instruction">—</p>
     </section>
 
-    <section class="board-section">
+    <section class="progress-section">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <span id="progress-text" class="progress-text">0 / 6</span>
+      </section>
+
+      <section class="board-section">
       <div id="board" class="board" role="grid" aria-label="رقعة الشطرنج"></div>
     </section>
 
@@ -35,6 +40,14 @@
     </section>
 
     <p id="status-message" class="status-message" aria-live="polite"></p>
+    <div id="win-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-icon">🏆</div>
+        <h2 class="modal-title">أحسنت!</h2>
+        <p class="modal-text">أكملت كل الألغاز بنجاح</p>
+        <button id="btn-play-again" class="btn btn-primary" type="button">🔄 العب مجدداً</button>
+      </div>
+    </div>
   </main>
 
   <footer class="app-footer">

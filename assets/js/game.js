@@ -28,6 +28,8 @@ const Game = (() => {
     els.btnHint.addEventListener('click', showHint);
     els.btnReset.addEventListener('click', resetPuzzle);
     els.btnNext.addEventListener('click', nextPuzzle);
+    const btnAgain = document.getElementById('btn-play-again');
+    if (btnAgain) btnAgain.addEventListener('click', playAgain);
   }
 
   function loadPuzzle(index) {
@@ -51,6 +53,7 @@ const Game = (() => {
     els.btnNext.disabled = true;
     setStatus('', '');
     Storage.saveCurrent(index);
+    updateProgress();
   }
 
   function onBoardClick(e) {
@@ -100,7 +103,11 @@ const Game = (() => {
       selectedSquare = null;
       setStatus('🎉 أحسنت! كش مات صحيح', 'success');
       Storage.markSolved(currentIndex);
+      updateProgress();
       els.btnNext.disabled = false;
+      if (currentIndex === getPuzzleCount() - 1) {
+        setTimeout(() => showWinModal(), 500);
+      }
     } else {
       // نقلة قانونية لكن ليست كش مات — نتراجع
       chess.undo();
@@ -129,11 +136,37 @@ const Game = (() => {
     loadPuzzle(currentIndex + 1);
   }
 
+  function updateProgress() {
+    const solved = Storage.getSolved().length;
+    const total = getPuzzleCount();
+    const pct = total ? Math.round((solved / total) * 100) : 0;
+    const fill = document.getElementById("progress-fill");
+    const text = document.getElementById("progress-text");
+    if (fill) fill.style.width = pct + "%";
+    if (text) text.textContent = solved + " / " + total;
+  }
+
   function setStatus(msg, type) {
     els.status.textContent = msg;
     els.status.className = 'status-message';
     if (type) els.status.classList.add(type);
   }
 
-  return { init };
+  function showWinModal() {
+    const modal = document.getElementById("win-modal");
+    if (modal) modal.classList.remove("hidden");
+  }
+
+  function hideWinModal() {
+    const modal = document.getElementById("win-modal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function playAgain() {
+    Storage.reset();
+    hideWinModal();
+    loadPuzzle(0);
+  }
+
+  return { init, playAgain };
 })();

@@ -24,8 +24,8 @@ const PUZZLES = [
   {
     id: 3,
     difficulty: 'سهل',
-    fen: '6k1/8/6K1/8/8/8/8/7R w - - 0 1',
-    solution: { from: 'h1', to: 'h8' },
+    fen: '6k1/5ppp/8/8/8/8/8/R6K w - - 0 1',
+    solution: { from: 'a1', to: 'a8' },
     instruction: 'أمت الملك الأسود بالقلعة',
     hint: 'انقل القلعة من h1 إلى h8',
   },
