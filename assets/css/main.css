@@ -274,3 +274,25 @@ body {
     opacity: 1;
   }
 }
+
+/* ---------- Loading & New Button ---------- */
+.loading-message {
+  text-align: center;
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  padding: 0.5rem;
+}
+
+.loading-message.hidden {
+  display: none;
+}
+
+#btn-new {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+#btn-new:hover {
+  background: #e8e8e8;
+}

@@ -75,3 +75,17 @@
 .square.check {
   background: radial-gradient(circle, #ff6b6b 20%, transparent 70%) !important;
 }
+
+/* ---------- تنسيق صور القطع ---------- */
+.piece-img {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+}
+
+.square.selected .piece-img {
+  transform: scale(1.15);
+}
