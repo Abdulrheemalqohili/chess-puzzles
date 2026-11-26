@@ -1,6 +1,5 @@
 /* ============================================
-   game.js — منطق اللعبة مع Lichess API
-   يدعم ألغازاً لا نهائية ومتعددة النقلات
+   game.js — منطق اللعبة مع Lichess API والأصوات
    ============================================ */
 
 const Game = (() => {
@@ -10,6 +9,11 @@ const Game = (() => {
   let selectedSquare = null;
   let isLocked = false;
   let score = 0;
+
+  // الأصوات
+  const sndMove = new Audio("assets/sounds/move.mp3");
+  const sndCapture = new Audio("assets/sounds/capture.mp3");
+  const sndError = new Audio("assets/sounds/error.mp3");
 
   const els = {};
 
@@ -38,7 +42,6 @@ const Game = (() => {
     if (btnAgain) btnAgain.addEventListener('click', playAgain);
   }
 
-  // جلب لغز من Lichess
   async function fetchPuzzle() {
     setLoading(true);
     setStatus('', '');
@@ -56,7 +59,7 @@ const Game = (() => {
       loadPuzzle();
     } catch (err) {
       console.error('فشل جلب اللغز:', err);
-      setStatus('⚠️ تعذّر جلب اللغز. تأكد من الإنترنت أو استخدم السيرفر المحلي.', 'error');
+      setStatus('⚠️ تعذّر جلب اللغز. تأكد من الإنترنت.', 'error');
     } finally {
       setLoading(false);
     }
@@ -74,10 +77,15 @@ const Game = (() => {
     chess.load_pgn(puzzleData.pgn);
     
     Board.render(chess.fen());
+    const history = chess.history({ verbose: true });
+    if (history.length > 0) {
+      const last = history[history.length - 1];
+      Board.highlightLastMove(last.from, last.to);
+    }
     els.counter.textContent = `#${puzzleData.id}`;
     
     const turn = chess.turn() === 'w' ? 'الأبيض' : 'الأسود';
-    els.instruction.textContent = `الخصم لعب للتو. دورك (${turn}) — اعثر على النقلة الصحيحة`;
+    els.instruction.textContent = `الخصم لعب للتو. دورك (${turn})`;
   }
 
   function onBoardClick(e) {
@@ -93,8 +101,6 @@ const Game = (() => {
         const isWhitePiece = piece === piece.toUpperCase();
         const isBlackPiece = piece === piece.toLowerCase();
         const turn = chess.turn();
-        
-        // الإصلاح: نتحقق أن القطعة تنتمي للاعب الذي عليه الدور
         if ((turn === 'w' && isWhitePiece) || (turn === 'b' && isBlackPiece)) {
           selectedSquare = squareName;
           Board.selectSquare(squareName);
@@ -118,8 +124,8 @@ const Game = (() => {
     const expectedMove = puzzleData.solution[solutionIndex];
     const userMove = from + to;
 
-    // التحقق من النقلة
     if (!expectedMove.startsWith(userMove)) {
+      sndError.play().catch(()=>{});
       Board.markTarget(to, false);
       setStatus('❌ ليست النقلة الصحيحة', 'error');
       setTimeout(() => {
@@ -129,22 +135,28 @@ const Game = (() => {
       return;
     }
 
-    // تنفيذ النقلة
     let move = chess.move({ from, to, promotion: 'q' });
-    
     if (!move && expectedMove.length > 4) {
-        const promotionPiece = expectedMove[4];
-        move = chess.move({ from, to, promotion: promotionPiece });
+        move = chess.move({ from, to, promotion: expectedMove[4] });
     }
 
     if (!move) {
+      sndError.play().catch(()=>{});
       setStatus('❌ نقلة غير قانونية', 'error');
       Board.clearSelection();
       selectedSquare = null;
       return;
     }
 
+    // تشغيل الصوت المناسب
+    if (move.flags.includes('c') || move.flags.includes('e')) {
+      sndCapture.play().catch(()=>{});
+    } else {
+      sndMove.play().catch(()=>{});
+    }
+
     Board.movePiece(from, to);
+    Board.highlightLastMove(from, to);
     Board.clearSelection();
     selectedSquare = null;
     solutionIndex++;
@@ -152,6 +164,7 @@ const Game = (() => {
     if (solutionIndex >= puzzleData.solution.length) {
       setStatus('🎉 أحسنت! لغز مكتمل', 'success');
       els.btnNext.disabled = false;
+      score++;
       incrementScore();
       return;
     }
@@ -173,7 +186,17 @@ const Game = (() => {
     setTimeout(() => {
       const move = chess.move({ from, to, promotion });
       if (move) {
-        Board.render(chess.fen()); // إعادة رسم الرقعة بالكامل
+        if (move.flags.includes('c') || move.flags.includes('e')) {
+          sndCapture.play().catch(()=>{});
+        } else {
+          sndMove.play().catch(()=>{});
+        }
+        Board.render(chess.fen());
+    const history = chess.history({ verbose: true });
+    if (history.length > 0) {
+      const last = history[history.length - 1];
+      Board.highlightLastMove(last.from, last.to);
+    }
       }
       
       solutionIndex++;
@@ -182,10 +205,10 @@ const Game = (() => {
       if (solutionIndex >= puzzleData.solution.length) {
         setStatus('🎉 أحسنت! لغز مكتمل', 'success');
         els.btnNext.disabled = false;
+        score++;
         incrementScore();
       } else {
-        const turn = chess.turn() === 'w' ? 'الأبيض' : 'الأسود';
-        setStatus(`🎯 دورك الآن (${turn})`, '');
+        setStatus(`🎯 دورك الآن`, '');
       }
     }, 500);
   }
@@ -194,9 +217,7 @@ const Game = (() => {
     if (!puzzleData || !puzzleData.solution) return;
     const nextMove = puzzleData.solution[solutionIndex];
     if (nextMove) {
-      const from = nextMove.slice(0, 2);
-      const to = nextMove.slice(2, 4);
-      setStatus(`💡 جرّب النقلة من ${from} إلى ${to}`, '');
+      setStatus(`💡 جرّب النقلة من ${nextMove.slice(0, 2)} إلى ${nextMove.slice(2, 4)}`, '');
     }
   }
 
@@ -207,7 +228,7 @@ const Game = (() => {
   function playAgain() {
     hideWinModal();
     score = 0;
-    incrementScore(); // تصفير العداد
+    incrementScore();
     fetchPuzzle();
   }
 

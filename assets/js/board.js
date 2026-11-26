@@ -1,6 +1,6 @@
 /* ============================================
-   board.js — رسم رقعة الشطرنج وعرض القطع (صور SVG)
-   + إضافة إحداثيات الحواف
+   board.js — رسم الرقعة، القطع، والإحداثيات
+   + إبراز النقلة الأخيرة
    ============================================ */
 
 const Board = (() => {
@@ -49,37 +49,40 @@ const Board = (() => {
         square.dataset.row = rowIdx;
         square.dataset.col = colIdx;
 
-        // إضافة إحداثيات الحواف
-        // الأحرف (a-h) على الصف السفلي (rowIdx === 7)
-        if (rowIdx === 7) {
-          square.dataset.file = FILES[colIdx];
-        }
-        // الأرقام (1-8) على العمود الأيسر (colIdx === 0)
-        if (colIdx === 0) {
-          square.dataset.rank = RANKS[rowIdx];
-        }
+        if (rowIdx === 7) square.dataset.file = FILES[colIdx];
+        if (colIdx === 0) square.dataset.rank = RANKS[rowIdx];
 
         if (pieceChar) {
           const pieceEl = document.createElement('span');
           pieceEl.className = 'piece';
           pieceEl.dataset.piece = pieceChar;
-          
           const imgName = PIECE_MAP[pieceChar];
           if (imgName) {
             pieceEl.innerHTML = `<img src="assets/img/pieces/${imgName}.svg" alt="${pieceChar}" class="piece-img" />`;
           }
-          
           square.appendChild(pieceEl);
         }
-
         boardEl.appendChild(square);
       });
     });
   }
 
+  // دالة إبراز النقلة الأخيرة
+  function highlightLastMove(from, to) {
+    boardEl.querySelectorAll('.square').forEach(sq => sq.classList.remove('last-move'));
+    if (from) {
+      const fromSq = boardEl.querySelector(`[data-square="${from}"]`);
+      if (fromSq) fromSq.classList.add('last-move');
+    }
+    if (to) {
+      const toSq = boardEl.querySelector(`[data-square="${to}"]`);
+      if (toSq) toSq.classList.add('last-move');
+    }
+  }
+
   function clearSelection() {
     boardEl.querySelectorAll('.square').forEach((sq) => {
-      sq.classList.remove('selected', 'target', 'wrong', 'move-hint', 'capture');
+      sq.classList.remove('selected', 'target', 'wrong');
     });
   }
 
@@ -115,6 +118,7 @@ const Board = (() => {
 
   return {
     render,
+    highlightLastMove,
     clearSelection,
     selectSquare,
     markTarget,
