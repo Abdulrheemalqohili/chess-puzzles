@@ -1,6 +1,5 @@
 /* ============================================
-   board.js — رسم الرقعة، القطع، الإحداثيات
-   + دعم قلب الرقعة والتلميح البصري
+   board.js — رسم الرقعة، القطع، النقلات المتاحة
    ============================================ */
 
 const Board = (() => {
@@ -13,7 +12,6 @@ const Board = (() => {
   };
 
   let boardEl = null;
-  let currentFen = null;
 
   function fenToGrid(fen) {
     const rows = fen.split(' ')[0].split('/');
@@ -35,7 +33,6 @@ const Board = (() => {
   }
 
   function render(fen, flipped = false) {
-    currentFen = fen;
     const grid = fenToGrid(fen);
     boardEl = document.getElementById('board');
     boardEl.innerHTML = '';
@@ -74,33 +71,41 @@ const Board = (() => {
 
   function highlightLastMove(from, to) {
     boardEl.querySelectorAll('.square').forEach(sq => sq.classList.remove('last-move'));
-    if (from) {
-      const fromSq = boardEl.querySelector(`[data-square="${from}"]`);
-      if (fromSq) fromSq.classList.add('last-move');
-    }
-    if (to) {
-      const toSq = boardEl.querySelector(`[data-square="${to}"]`);
-      if (toSq) toSq.classList.add('last-move');
-    }
+    if (from) boardEl.querySelector(`[data-square="${from}"]`)?.classList.add('last-move');
+    if (to) boardEl.querySelector(`[data-square="${to}"]`)?.classList.add('last-move');
   }
 
-  // دالة التلميح البصري
   function highlightHint(from, to) {
-    clearSelection(); // مسح أي تحديد سابق
-    if (from) {
-      const fromSq = boardEl.querySelector(`[data-square="${from}"]`);
-      if (fromSq) fromSq.classList.add('hint-from');
-    }
-    if (to) {
-      const toSq = boardEl.querySelector(`[data-square="${to}"]`);
-      if (toSq) toSq.classList.add('hint-to');
-    }
+    clearSelection();
+    if (from) boardEl.querySelector(`[data-square="${from}"]`)?.classList.add('hint-from');
+    if (to) boardEl.querySelector(`[data-square="${to}"]`)?.classList.add('hint-to');
+  }
+
+  function showLegalMoves(moves) {
+    clearMoves();
+    moves.forEach(m => {
+      const sq = boardEl.querySelector(`[data-square="${m.to}"]`);
+      if (sq) {
+        if (m.flags.includes('c') || m.flags.includes('e')) {
+          sq.classList.add('move-capture');
+        } else {
+          sq.classList.add('move-dot');
+        }
+      }
+    });
+  }
+
+  function clearMoves() {
+    boardEl.querySelectorAll('.move-dot, .move-capture').forEach(el => {
+      el.classList.remove('move-dot', 'move-capture');
+    });
   }
 
   function clearSelection() {
     boardEl.querySelectorAll('.square').forEach((sq) => {
       sq.classList.remove('selected', 'target', 'wrong', 'hint-from', 'hint-to');
     });
+    clearMoves();
   }
 
   function selectSquare(squareName) {
@@ -131,14 +136,8 @@ const Board = (() => {
   }
 
   return {
-    render,
-    highlightLastMove,
-    highlightHint,
-    clearSelection,
-    selectSquare,
-    markTarget,
-    getPieceAt,
-    movePiece,
-    coordsToSquare,
+    render, highlightLastMove, highlightHint,
+    showLegalMoves, clearSelection, selectSquare,
+    markTarget, getPieceAt, movePiece
   };
 })();

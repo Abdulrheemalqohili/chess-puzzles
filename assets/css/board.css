@@ -150,3 +150,34 @@
   border: 4px dashed #51a3ff !important;
   box-sizing: border-box;
 }
+
+/* ---------- إظهار النقلات المتاحة ---------- */
+.square.move-dot::after {
+  content: '';
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.square.move-capture::after {
+  content: '';
+  position: absolute;
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  border: 5px solid rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ألوان الدوائر للمربعات الداكنة */
+.square.dark.move-dot::after {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+.square.dark.move-capture::after {
+  border-color: rgba(255, 255, 255, 0.3);
+}

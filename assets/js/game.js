@@ -1,5 +1,5 @@
 /* ============================================
-   game.js — منطق اللعبة (أصوات، قلب، تلميح، سلسلة)
+   game.js — منطق اللعبة الشامل
    ============================================ */
 
 const Game = (() => {
@@ -11,6 +11,7 @@ const Game = (() => {
   let playerColor = 'w';
   let score = 0;
   let streak = 0;
+  let bestStreak = parseInt(localStorage.getItem('chess_best_streak') || '0', 10);
 
   const sndMove = new Audio("assets/sounds/move.mp3");
   const sndCapture = new Audio("assets/sounds/capture.mp3");
@@ -29,6 +30,7 @@ const Game = (() => {
     els.loading = document.getElementById('loading-message');
 
     bindEvents();
+    updateUI(); // عرض أفضل سلسلة محفوظة عند البدء
     fetchPuzzle();
   }
 
@@ -38,11 +40,12 @@ const Game = (() => {
     els.btnReset.addEventListener('click', resetPuzzle);
     els.btnNext.addEventListener('click', fetchPuzzle);
     els.btnNew.addEventListener('click', fetchPuzzle);
-    const diffSelect = document.getElementById('difficulty-select');
-    if (diffSelect) diffSelect.addEventListener('change', fetchPuzzle);
 
     const btnAgain = document.getElementById('btn-play-again');
     if (btnAgain) btnAgain.addEventListener('click', playAgain);
+    
+    const diffSelect = document.getElementById('difficulty-select');
+    if (diffSelect) diffSelect.addEventListener('change', fetchPuzzle);
   }
 
   async function fetchPuzzle() {
@@ -52,7 +55,8 @@ const Game = (() => {
     els.btnHint.disabled = true;
 
     try {
-      const res = await fetch('https://lichess.org/api/puzzle/next?difficulty=' + (document.getElementById('difficulty-select')?.value || 'normal'));
+      const diff = document.getElementById('difficulty-select')?.value || 'normal';
+      const res = await fetch('https://lichess.org/api/puzzle/next?difficulty=' + diff);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       
@@ -110,6 +114,10 @@ const Game = (() => {
         if ((turn === 'w' && isWhitePiece) || (turn === 'b' && isBlackPiece)) {
           selectedSquare = squareName;
           Board.selectSquare(squareName);
+          
+          // إظهار النقلات المتاحة
+          const moves = chess.moves({ square: squareName, verbose: true });
+          Board.showLegalMoves(moves);
         }
       }
       return;
@@ -130,9 +138,9 @@ const Game = (() => {
     const expectedMove = puzzleData.solution[solutionIndex];
     const userMove = from + to;
 
-    // إذا أخطأ اللاعب: تصفير السلسلة
     if (!expectedMove.startsWith(userMove)) {
       sndError.play().catch(()=>{});
+      Board.clearSelection();
       Board.markTarget(to, false);
       setStatus('❌ ليست النقلة الصحيحة', 'error');
       resetStreak();
@@ -172,13 +180,11 @@ const Game = (() => {
       puzzleSolved();
       return;
     }
-
     playOpponentMove();
   }
 
   function playOpponentMove() {
     if (solutionIndex >= puzzleData.solution.length) return;
-
     const oppMoveUci = puzzleData.solution[solutionIndex];
     const from = oppMoveUci.slice(0, 2);
     const to = oppMoveUci.slice(2, 4);
@@ -198,7 +204,6 @@ const Game = (() => {
         Board.render(chess.fen(), playerColor === 'b');
         Board.highlightLastMove(from, to);
       }
-      
       solutionIndex++;
       isLocked = false;
 
@@ -215,9 +220,15 @@ const Game = (() => {
     els.btnNext.disabled = false;
     score++;
     streak++;
+    
+    // حفظ أفضل سلسلة
+    if (streak > bestStreak) {
+      bestStreak = streak;
+      localStorage.setItem('chess_best_streak', bestStreak);
+    }
+    
     updateUI();
     
-    // رسالة تشجيعية عند السلسلة
     if (streak === 3) setStatus('🔥 سلسلة رائعة! 3 ألغاز متتالية', 'success');
     if (streak === 5) setStatus('🌟 أنت محترف! 5 ألغاز متتالية', 'success');
     if (streak >= 10) setStatus('👑 أسطورة! 10 ألغاز متتالية', 'success');
@@ -233,14 +244,15 @@ const Game = (() => {
   function updateUI() {
     const textScore = document.getElementById('progress-text');
     const textStreak = document.getElementById('streak-text');
+    const textBest = document.getElementById('best-streak-text');
     
     if (textScore) textScore.textContent = `🏆 ${score}`;
     if (textStreak) {
       textStreak.textContent = `🔥 ${streak}`;
-      // تأثير نبض عند التحديث
       textStreak.classList.add('pop');
       setTimeout(() => textStreak.classList.remove('pop'), 200);
     }
+    if (textBest) textBest.textContent = `أفضل: ${bestStreak}`;
   }
 
   function showHint() {
