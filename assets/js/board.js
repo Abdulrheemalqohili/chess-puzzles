@@ -1,6 +1,6 @@
 /* ============================================
-   board.js — رسم الرقعة، القطع، والإحداثيات
-   + إبراز النقلة الأخيرة
+   board.js — رسم الرقعة، القطع، الإحداثيات
+   + دعم قلب الرقعة (Auto-Flip)
    ============================================ */
 
 const Board = (() => {
@@ -34,23 +34,33 @@ const Board = (() => {
     return FILES[col] + RANKS[row];
   }
 
-  function render(fen) {
+  // flipped: true إذا كنا نلعب بالأسود
+  function render(fen, flipped = false) {
     currentFen = fen;
     const grid = fenToGrid(fen);
     boardEl = document.getElementById('board');
     boardEl.innerHTML = '';
 
-    grid.forEach((rowArr, rowIdx) => {
-      rowArr.forEach((pieceChar, colIdx) => {
+    // نرسم 8 صفوف و 8 أعمدة
+    for (let displayRow = 0; displayRow < 8; displayRow++) {
+      for (let displayCol = 0; displayCol < 8; displayCol++) {
+        
+        // إذا كانت الرقعة مقلوبة، نعكس الإحداثيات
+        const rowIdx = flipped ? 7 - displayRow : displayRow;
+        const colIdx = flipped ? 7 - displayCol : displayCol;
+        
+        const pieceChar = grid[rowIdx][colIdx];
         const square = document.createElement('div');
         const isLight = (rowIdx + colIdx) % 2 === 0;
+        
         square.className = `square ${isLight ? 'light' : 'dark'}`;
         square.dataset.square = coordsToSquare(rowIdx, colIdx);
         square.dataset.row = rowIdx;
         square.dataset.col = colIdx;
 
-        if (rowIdx === 7) square.dataset.file = FILES[colIdx];
-        if (colIdx === 0) square.dataset.rank = RANKS[rowIdx];
+        // إحداثيات الحواف (تعتمد على الشاشة وليس على الرقعة)
+        if (displayRow === 7) square.dataset.file = FILES[colIdx];
+        if (displayCol === 0) square.dataset.rank = RANKS[rowIdx];
 
         if (pieceChar) {
           const pieceEl = document.createElement('span');
@@ -63,11 +73,10 @@ const Board = (() => {
           square.appendChild(pieceEl);
         }
         boardEl.appendChild(square);
-      });
-    });
+      }
+    }
   }
 
-  // دالة إبراز النقلة الأخيرة
   function highlightLastMove(from, to) {
     boardEl.querySelectorAll('.square').forEach(sq => sq.classList.remove('last-move'));
     if (from) {
@@ -106,13 +115,10 @@ const Board = (() => {
     const fromSq = boardEl.querySelector(`[data-square="${from}"]`);
     const toSq = boardEl.querySelector(`[data-square="${to}"]`);
     if (!fromSq || !toSq) return;
-
     const piece = fromSq.querySelector('.piece');
     if (!piece) return;
-
     const capturedPiece = toSq.querySelector('.piece');
     if (capturedPiece) capturedPiece.remove();
-
     toSq.appendChild(piece);
   }
 

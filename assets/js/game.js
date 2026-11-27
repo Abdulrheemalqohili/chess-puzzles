@@ -8,6 +8,7 @@ const Game = (() => {
   let solutionIndex = 0;
   let selectedSquare = null;
   let isLocked = false;
+  let playerColor = 'w';
   let score = 0;
 
   // الأصوات
@@ -76,7 +77,8 @@ const Game = (() => {
     chess = new Chess();
     chess.load_pgn(puzzleData.pgn);
     
-    Board.render(chess.fen());
+    playerColor = chess.turn();
+    Board.render(chess.fen(), playerColor === 'b');
     const history = chess.history({ verbose: true });
     if (history.length > 0) {
       const last = history[history.length - 1];
@@ -191,7 +193,8 @@ const Game = (() => {
         } else {
           sndMove.play().catch(()=>{});
         }
-        Board.render(chess.fen());
+        playerColor = chess.turn();
+    Board.render(chess.fen(), playerColor === 'b');
     const history = chess.history({ verbose: true });
     if (history.length > 0) {
       const last = history[history.length - 1];

@@ -3,58 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="تطبيق ألغاز الشطرنج — تدرّب على إيجاد النقلة الصحيحة" />
   <title>♟️ ألغاز الشطرنج</title>
-
   <link rel="stylesheet" href="assets/css/main.css" />
   <link rel="stylesheet" href="assets/css/board.css" />
 </head>
 <body>
   <header class="app-header">
-    <h1 class="app-title">♟️ ألغاز الشطرنج</h1>
-    <p class="app-subtitle">اعثر على النقلة الصحيحة</p>
+    <span class="header-logo">♟️ ألغاز الشطرنج</span>
   </header>
 
   <main class="app-main">
-    <section class="puzzle-panel">
+    <div class="puzzle-panel">
       <div class="puzzle-info">
-        <span class="puzzle-label">اللغز</span>
-        <span id="puzzle-counter" class="puzzle-counter">1 / 1</span>
+        <span id="puzzle-counter" class="puzzle-counter">#—</span>
+        <span id="progress-text" class="progress-text">🏆 0</span>
       </div>
-      <p id="puzzle-instruction" class="puzzle-instruction">—</p>
-    </section>
+      <p id="puzzle-instruction" class="puzzle-instruction">جارٍ جلب اللغز...</p>
+    </div>
 
-    <section class="progress-section">
-        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
-        <span id="progress-text" class="progress-text">0 / 6</span>
-      </section>
-
-      <section class="board-section">
+    <section class="board-section">
       <div id="board" class="board" role="grid" aria-label="رقعة الشطرنج" dir="ltr"></div>
     </section>
 
-    <section class="controls">
-      <button id="btn-hint" class="btn btn-secondary" type="button">💡 تلميح</button>
-      <button id="btn-reset" class="btn btn-secondary" type="button">🔄 إعادة</button>
-      <button id="btn-next" class="btn btn-primary" type="button" disabled>التالي ➡️</button>
-      <button id="btn-new" class="btn btn-primary" type="button">🔄 لغز جديد</button>
+    <p id="status-message" class="status-message" aria-live="polite"></p>
+    <p id="loading-message" class="loading-message hidden">⏳ جارٍ جلب لغز...</p>
+
+    <section class="bottom-bar">
+      <button id="btn-hint" class="nav-btn" type="button">
+        <span class="nav-icon">💡</span>
+        <span class="nav-label">تلميح</span>
+      </button>
+      <button id="btn-reset" class="nav-btn" type="button">
+        <span class="nav-icon">↩️</span>
+        <span class="nav-label">إعادة</span>
+      </button>
+      <button id="btn-next" class="nav-btn" type="button" disabled>
+        <span class="nav-icon">⏭️</span>
+        <span class="nav-label">التالي</span>
+      </button>
+      <button id="btn-new" class="nav-btn" type="button">
+        <span class="nav-icon">🔄</span>
+        <span class="nav-label">جديد</span>
+      </button>
     </section>
 
-    <p id="status-message" class="status-message" aria-live="polite"></p>
-    <p id="loading-message" class="loading-message hidden">⏳ جارٍ جلب لغز من Lichess...</p>
     <div id="win-modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-icon">🏆</div>
         <h2 class="modal-title">أحسنت!</h2>
-        <p class="modal-text">أكملت كل الألغاز بنجاح</p>
+        <p class="modal-text">أكملت اللغز بنجاح</p>
         <button id="btn-play-again" class="btn btn-primary" type="button">🔄 العب مجدداً</button>
       </div>
     </div>
   </main>
-
-  <footer class="app-footer">
-    <p>صُنع بـ ❤️ باستخدام HTML / CSS / JavaScript</p>
-  </footer>
 
   <script src="assets/libs/chess.min.js"></script>
   <script src="assets/js/storage.js"></script>
@@ -64,6 +65,3 @@
   <script src="assets/js/main.js"></script>
 </body>
 </html>
-
-0
-

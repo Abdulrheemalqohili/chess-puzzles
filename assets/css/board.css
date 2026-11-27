@@ -1,5 +1,5 @@
 /* ============================================
-   board.css — رقعة بألوان Chess.com
+   board.css — تصميم رقعة الشطرنج والقطع
    ============================================ */
 
 .board-section {
@@ -12,15 +12,15 @@
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
   width: 100%;
-  max-width: 440px;
+  max-width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: var(--radius);
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
   user-select: none;
 }
 
-/* ---------- المربعات ---------- */
+/* ---------- المربعات الأساسية ---------- */
 .square {
   display: flex;
   align-items: center;
@@ -28,62 +28,48 @@
   font-size: clamp(1.4rem, 6vw, 2.4rem);
   line-height: 1;
   cursor: pointer;
-  transition: background var(--transition);
   position: relative;
 }
 
-/* ألوان Chess.com */
 .square.light {
-  background: #eeeed2;
+  background-color: #EBECD0;
 }
 
 .square.dark {
-  background: #769656;
+  background-color: #739552;
 }
 
-.square:hover {
-  filter: brightness(0.95);
+/* ---------- لون النقلة الأخيرة (أصفر ساطع) ---------- */
+.square.last-move {
+  background-color: #f7f769 !important;
 }
 
-/* مربع محدد */
+/* ---------- التحديد عند الضغط على القطعة ---------- */
 .square.selected {
-  background: #baca44 !important;
+  background-color: #baca44 !important; /* أخضر فاتح للتحديد */
 }
 
-/* مربع هدف صحيح */
-.square.target {
-  background: #f7f769 !important;
-}
-
-/* مربع هدف خاطئ */
+/* ---------- الأخطاء ---------- */
 .square.wrong {
-  background: #e8a8a8 !important;
+  background-color: #e8a8a8 !important; /* أحمر فاتح */
 }
 
 /* ---------- القطع ---------- */
 .piece {
   pointer-events: none;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
-  transition: transform var(--transition);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
 }
 
-.square.selected .piece {
-  transform: scale(1.1);
-}
-
-/* تمييز ملك الخصم عند الكش */
-.square.check {
-  background: radial-gradient(circle, #ff6b6b 20%, transparent 70%) !important;
-}
-
-/* ---------- تنسيق صور القطع ---------- */
 .piece-img {
   width: 90%;
   height: 90%;
   object-fit: contain;
-  pointer-events: none;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
-  transition: transform 0.2s ease;
 }
 
 .square.selected .piece-img {
@@ -113,18 +99,13 @@
   pointer-events: none;
 }
 
-/* ألوان تتباين مع لون المربع */
+/* ألوان الإحداثيات */
 .square.light[data-file]::after,
 .square.light[data-rank]::before {
-  color: #769656;
+  color: #739552;
 }
 
 .square.dark[data-file]::after,
 .square.dark[data-rank]::before {
-  color: #eeeed2;
-}
-
-/* ---------- إبراز النقلة الأخيرة ---------- */
-.square.last-move {
-  background-color: rgba(255, 255, 51, 0.5) !important;
+  color: #EBECD0;
 }
