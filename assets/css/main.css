@@ -192,3 +192,15 @@ body { display: flex; flex-direction: column; }
 .nav-btn:disabled .nav-icon {
   filter: grayscale(100%) opacity(0.2);
 }
+
+/* تصميم السلسلة */
+.streak-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ff9800; /* برتقالي */
+  margin-left: 10px;
+  transition: transform 0.2s;
+}
+.streak-text.pop {
+  transform: scale(1.3);
+}

@@ -1,5 +1,5 @@
 /* ============================================
-   game.js — منطق اللعبة (أصوات، قلب رقعة، تلميح بصري)
+   game.js — منطق اللعبة (أصوات، قلب، تلميح، سلسلة)
    ============================================ */
 
 const Game = (() => {
@@ -10,8 +10,8 @@ const Game = (() => {
   let isLocked = false;
   let playerColor = 'w';
   let score = 0;
+  let streak = 0;
 
-  // الأصوات
   const sndMove = new Audio("assets/sounds/move.mp3");
   const sndCapture = new Audio("assets/sounds/capture.mp3");
   const sndError = new Audio("assets/sounds/error.mp3");
@@ -128,10 +128,12 @@ const Game = (() => {
     const expectedMove = puzzleData.solution[solutionIndex];
     const userMove = from + to;
 
+    // إذا أخطأ اللاعب: تصفير السلسلة
     if (!expectedMove.startsWith(userMove)) {
       sndError.play().catch(()=>{});
       Board.markTarget(to, false);
       setStatus('❌ ليست النقلة الصحيحة', 'error');
+      resetStreak();
       setTimeout(() => {
         Board.clearSelection();
         selectedSquare = null;
@@ -165,10 +167,7 @@ const Game = (() => {
     solutionIndex++;
 
     if (solutionIndex >= puzzleData.solution.length) {
-      setStatus('🎉 أحسنت! لغز مكتمل', 'success');
-      els.btnNext.disabled = false;
-      score++;
-      incrementScore();
+      puzzleSolved();
       return;
     }
 
@@ -202,21 +201,50 @@ const Game = (() => {
       isLocked = false;
 
       if (solutionIndex >= puzzleData.solution.length) {
-        setStatus('🎉 أحسنت! لغز مكتمل', 'success');
-        els.btnNext.disabled = false;
-        score++;
-        incrementScore();
+        puzzleSolved();
       } else {
         setStatus(`🎯 دورك الآن`, '');
       }
     }, 500);
   }
 
+  function puzzleSolved() {
+    setStatus('🎉 أحسنت! لغز مكتمل', 'success');
+    els.btnNext.disabled = false;
+    score++;
+    streak++;
+    updateUI();
+    
+    // رسالة تشجيعية عند السلسلة
+    if (streak === 3) setStatus('🔥 سلسلة رائعة! 3 ألغاز متتالية', 'success');
+    if (streak === 5) setStatus('🌟 أنت محترف! 5 ألغاز متتالية', 'success');
+    if (streak >= 10) setStatus('👑 أسطورة! 10 ألغاز متتالية', 'success');
+  }
+
+  function resetStreak() {
+    if (streak > 0) {
+      streak = 0;
+      updateUI();
+    }
+  }
+
+  function updateUI() {
+    const textScore = document.getElementById('progress-text');
+    const textStreak = document.getElementById('streak-text');
+    
+    if (textScore) textScore.textContent = `🏆 ${score}`;
+    if (textStreak) {
+      textStreak.textContent = `🔥 ${streak}`;
+      // تأثير نبض عند التحديث
+      textStreak.classList.add('pop');
+      setTimeout(() => textStreak.classList.remove('pop'), 200);
+    }
+  }
+
   function showHint() {
     if (!puzzleData || !puzzleData.solution) return;
     const nextMove = puzzleData.solution[solutionIndex];
     if (nextMove) {
-      // التلميح البصري الجديد
       setStatus('💡 القطعة المضيئة هي التي يجب تحريكها', '');
       Board.highlightHint(nextMove.slice(0, 2), nextMove.slice(2, 4));
     }
@@ -229,7 +257,8 @@ const Game = (() => {
   function playAgain() {
     hideWinModal();
     score = 0;
-    incrementScore();
+    streak = 0;
+    updateUI();
     fetchPuzzle();
   }
 
@@ -244,11 +273,6 @@ const Game = (() => {
     if (els.btnNew) els.btnNew.disabled = isLoading;
   }
 
-  function incrementScore() {
-    const text = document.getElementById('progress-text');
-    if (text) text.textContent = `🏆 ${score}`;
-  }
-
   function showWinModal() {
     const modal = document.getElementById('win-modal');
     if (modal) modal.classList.remove('hidden');
@@ -259,5 +283,5 @@ const Game = (() => {
     if (modal) modal.classList.add('hidden');
   }
 
-  return { init, playAgain, incrementScore };
+  return { init, playAgain, updateUI };
 })();
