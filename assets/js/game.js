@@ -1,5 +1,5 @@
 /* ============================================
-   game.js — منطق اللعبة مع Lichess API والأصوات
+   game.js — منطق اللعبة (أصوات، قلب رقعة، تلميح بصري)
    ============================================ */
 
 const Game = (() => {
@@ -79,14 +79,16 @@ const Game = (() => {
     
     playerColor = chess.turn();
     Board.render(chess.fen(), playerColor === 'b');
+    
     const history = chess.history({ verbose: true });
     if (history.length > 0) {
       const last = history[history.length - 1];
       Board.highlightLastMove(last.from, last.to);
     }
+    
     els.counter.textContent = `#${puzzleData.id}`;
     
-    const turn = chess.turn() === 'w' ? 'الأبيض' : 'الأسود';
+    const turn = playerColor === 'w' ? 'الأبيض' : 'الأسود';
     els.instruction.textContent = `الخصم لعب للتو. دورك (${turn})`;
   }
 
@@ -150,7 +152,6 @@ const Game = (() => {
       return;
     }
 
-    // تشغيل الصوت المناسب
     if (move.flags.includes('c') || move.flags.includes('e')) {
       sndCapture.play().catch(()=>{});
     } else {
@@ -158,8 +159,8 @@ const Game = (() => {
     }
 
     Board.movePiece(from, to);
-    Board.highlightLastMove(from, to);
     Board.clearSelection();
+    Board.highlightLastMove(from, to);
     selectedSquare = null;
     solutionIndex++;
 
@@ -193,13 +194,8 @@ const Game = (() => {
         } else {
           sndMove.play().catch(()=>{});
         }
-        playerColor = chess.turn();
-    Board.render(chess.fen(), playerColor === 'b');
-    const history = chess.history({ verbose: true });
-    if (history.length > 0) {
-      const last = history[history.length - 1];
-      Board.highlightLastMove(last.from, last.to);
-    }
+        Board.render(chess.fen(), playerColor === 'b');
+        Board.highlightLastMove(from, to);
       }
       
       solutionIndex++;
@@ -220,7 +216,9 @@ const Game = (() => {
     if (!puzzleData || !puzzleData.solution) return;
     const nextMove = puzzleData.solution[solutionIndex];
     if (nextMove) {
-      setStatus(`💡 جرّب النقلة من ${nextMove.slice(0, 2)} إلى ${nextMove.slice(2, 4)}`, '');
+      // التلميح البصري الجديد
+      setStatus('💡 القطعة المضيئة هي التي يجب تحريكها', '');
+      Board.highlightHint(nextMove.slice(0, 2), nextMove.slice(2, 4));
     }
   }
 

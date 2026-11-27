@@ -1,6 +1,6 @@
 /* ============================================
    board.js — رسم الرقعة، القطع، الإحداثيات
-   + دعم قلب الرقعة (Auto-Flip)
+   + دعم قلب الرقعة والتلميح البصري
    ============================================ */
 
 const Board = (() => {
@@ -34,18 +34,14 @@ const Board = (() => {
     return FILES[col] + RANKS[row];
   }
 
-  // flipped: true إذا كنا نلعب بالأسود
   function render(fen, flipped = false) {
     currentFen = fen;
     const grid = fenToGrid(fen);
     boardEl = document.getElementById('board');
     boardEl.innerHTML = '';
 
-    // نرسم 8 صفوف و 8 أعمدة
     for (let displayRow = 0; displayRow < 8; displayRow++) {
       for (let displayCol = 0; displayCol < 8; displayCol++) {
-        
-        // إذا كانت الرقعة مقلوبة، نعكس الإحداثيات
         const rowIdx = flipped ? 7 - displayRow : displayRow;
         const colIdx = flipped ? 7 - displayCol : displayCol;
         
@@ -58,7 +54,6 @@ const Board = (() => {
         square.dataset.row = rowIdx;
         square.dataset.col = colIdx;
 
-        // إحداثيات الحواف (تعتمد على الشاشة وليس على الرقعة)
         if (displayRow === 7) square.dataset.file = FILES[colIdx];
         if (displayCol === 0) square.dataset.rank = RANKS[rowIdx];
 
@@ -89,9 +84,22 @@ const Board = (() => {
     }
   }
 
+  // دالة التلميح البصري
+  function highlightHint(from, to) {
+    clearSelection(); // مسح أي تحديد سابق
+    if (from) {
+      const fromSq = boardEl.querySelector(`[data-square="${from}"]`);
+      if (fromSq) fromSq.classList.add('hint-from');
+    }
+    if (to) {
+      const toSq = boardEl.querySelector(`[data-square="${to}"]`);
+      if (toSq) toSq.classList.add('hint-to');
+    }
+  }
+
   function clearSelection() {
     boardEl.querySelectorAll('.square').forEach((sq) => {
-      sq.classList.remove('selected', 'target', 'wrong');
+      sq.classList.remove('selected', 'target', 'wrong', 'hint-from', 'hint-to');
     });
   }
 
@@ -125,6 +133,7 @@ const Board = (() => {
   return {
     render,
     highlightLastMove,
+    highlightHint,
     clearSelection,
     selectSquare,
     markTarget,

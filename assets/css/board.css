@@ -109,3 +109,44 @@
 .square.dark[data-rank]::before {
   color: #EBECD0;
 }
+
+/* ---------- التلميح البصري ---------- */
+.square.hint-from {
+  box-shadow: inset 0 0 15px 6px rgba(81, 163, 255, 0.9) !important;
+  z-index: 10;
+  animation: pulseHint 1.5s infinite;
+}
+
+.square.hint-to {
+  box-shadow: inset 0 0 15px 6px rgba(81, 163, 255, 0.4) !important;
+  z-index: 10;
+}
+
+@keyframes pulseHint {
+  0% { box-shadow: inset 0 0 5px 2px rgba(81, 163, 255, 0.9); }
+  50% { box-shadow: inset 0 0 20px 8px rgba(81, 163, 255, 0.9); }
+  100% { box-shadow: inset 0 0 5px 2px rgba(81, 163, 255, 0.9); }
+}
+
+/* تصميم تلميح بصري قوي جداً */
+.square.hint-from {
+  background-color: rgba(81, 163, 255, 0.7) !important;
+  box-shadow: inset 0 0 0 4px #51a3ff !important;
+  z-index: 10;
+}
+
+.square.hint-to {
+  box-shadow: inset 0 0 0 5px #51a3ff !important;
+  z-index: 10;
+}
+
+/* تلميح مرئي قوي جداً */
+.square.hint-from {
+  background-color: #51a3ff !important; /* أزرق ساطع */
+  box-shadow: inset 0 0 0 4px #1a6fbf !important;
+}
+
+.square.hint-to {
+  border: 4px dashed #51a3ff !important;
+  box-sizing: border-box;
+}
