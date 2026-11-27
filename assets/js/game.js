@@ -1,5 +1,5 @@
 /* ============================================
-   game.js — منطق اللعبة الشامل
+   game.js — منطق اللعبة الشامل (مع نافذة الترقية)
    ============================================ */
 
 const Game = (() => {
@@ -12,6 +12,9 @@ const Game = (() => {
   let score = 0;
   let streak = 0;
   let bestStreak = parseInt(localStorage.getItem('chess_best_streak') || '0', 10);
+  
+  // متغير لحفظ النقلة المعلقة أثناء الترقية
+  let pendingPromotion = null; 
 
   const sndMove = new Audio("assets/sounds/move.mp3");
   const sndCapture = new Audio("assets/sounds/capture.mp3");
@@ -30,7 +33,7 @@ const Game = (() => {
     els.loading = document.getElementById('loading-message');
 
     bindEvents();
-    updateUI(); // عرض أفضل سلسلة محفوظة عند البدء
+    updateUI();
     fetchPuzzle();
   }
 
@@ -76,12 +79,18 @@ const Game = (() => {
     solutionIndex = 0;
     selectedSquare = null;
     isLocked = false;
+    pendingPromotion = null;
     els.btnNext.disabled = true;
     els.btnHint.disabled = false;
     setStatus('', '');
+    document.getElementById('promotion-modal').classList.add('hidden');
 
     chess = new Chess();
-    chess.load_pgn(puzzleData.pgn);
+    if (puzzleData.fen) {
+      chess.load(puzzleData.fen);
+    } else {
+      chess.load_pgn(puzzleData.pgn);
+    }
     
     playerColor = chess.turn();
     Board.render(chess.fen(), playerColor === 'b');
@@ -99,7 +108,7 @@ const Game = (() => {
   }
 
   function onBoardClick(e) {
-    if (isLocked) return;
+    if (isLocked || pendingPromotion) return; // منع النقر أثناء الترقية
     const squareEl = e.target.closest('.square');
     if (!squareEl) return;
 
@@ -115,7 +124,6 @@ const Game = (() => {
           selectedSquare = squareName;
           Board.selectSquare(squareName);
           
-          // إظهار النقلات المتاحة
           const moves = chess.moves({ square: squareName, verbose: true });
           Board.showLegalMoves(moves);
         }
@@ -151,10 +159,45 @@ const Game = (() => {
       return;
     }
 
-    let move = chess.move({ from, to, promotion: 'q' });
-    if (!move && expectedMove.length > 4) {
-        move = chess.move({ from, to, promotion: expectedMove[4] });
+    // التحقق من وجود ترقية (Promotion)
+    const piece = chess.get(from);
+    const isPromotion = piece && piece.type === 'p' && (to[1] === '8' || to[1] === '1');
+
+    if (isPromotion) {
+      // إظهار نافذة الترقية
+      pendingPromotion = { from, to, expectedMove };
+      showPromotionModal(playerColor);
+      return;
     }
+
+    // تنفيذ النقلة العادية
+    executeMove(from, to, 'q', expectedMove);
+  }
+
+  function showPromotionModal(color) {
+    const modal = document.getElementById('promotion-modal');
+    const choices = document.getElementById('promotion-choices');
+    choices.innerHTML = '';
+    const pieces = ['q', 'r', 'b', 'n'];
+    const prefix = color === 'w' ? 'w' : 'b';
+
+    pieces.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'promotion-piece';
+      div.innerHTML = `<img src="assets/img/pieces/${prefix}${p.toUpperCase()}.svg" alt="${p}" />`;
+      div.onclick = () => {
+        modal.classList.add('hidden');
+        executeMove(pendingPromotion.from, pendingPromotion.to, p, pendingPromotion.expectedMove);
+        pendingPromotion = null;
+      };
+      choices.appendChild(div);
+    });
+
+    modal.classList.remove('hidden');
+  }
+
+  function executeMove(from, to, promotionPiece, expectedMove) {
+    let move = chess.move({ from, to, promotion: promotionPiece });
 
     if (!move) {
       sndError.play().catch(()=>{});
@@ -162,6 +205,17 @@ const Game = (() => {
       Board.clearSelection();
       selectedSquare = null;
       return;
+    }
+
+    // التحقق: هل اختار اللاعب قطعة الترقية الصحيحة التي يتطلبها اللغز؟
+    if (move.flags.includes('p') && expectedMove[4] !== move.promotion) {
+        chess.undo();
+        sndError.play().catch(()=>{});
+        setStatus('❌ قطعة الترقية خاطئة (جرب الحصان مثلاً)', 'error');
+        resetStreak();
+        Board.clearSelection();
+        selectedSquare = null;
+        return;
     }
 
     if (move.flags.includes('c') || move.flags.includes('e')) {
@@ -221,7 +275,6 @@ const Game = (() => {
     score++;
     streak++;
     
-    // حفظ أفضل سلسلة
     if (streak > bestStreak) {
       bestStreak = streak;
       localStorage.setItem('chess_best_streak', bestStreak);

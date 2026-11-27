@@ -224,3 +224,51 @@ body { display: flex; flex-direction: column; }
 .difficulty-select:focus {
   border-color: var(--primary);
 }
+
+/* ---------- Promotion Modal ---------- */
+.promotion-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 250;
+}
+
+.promotion-modal.hidden {
+  display: none;
+}
+
+.promotion-content {
+  display: flex;
+  gap: 10px;
+  background: var(--bg-panel);
+  padding: 15px;
+  border-radius: var(--radius);
+  border: 1px solid #3d3b38;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.promotion-piece {
+  width: 60px;
+  height: 60px;
+  cursor: pointer;
+  border-radius: 8px;
+  background: #262421;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.promotion-piece:hover {
+  background: #3d3b38;
+  transform: scale(1.05);
+}
+
+.promotion-piece img {
+  width: 85%;
+  height: 85%;
+  pointer-events: none;
+}
