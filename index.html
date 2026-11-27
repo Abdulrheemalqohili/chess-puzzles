@@ -16,6 +16,12 @@
     <div class="puzzle-panel">
       <div class="puzzle-info">
         <span id="puzzle-counter" class="puzzle-counter">#—</span>
+        <select id="difficulty-select" class="difficulty-select">
+          <option value="easier">سهل</option>
+          <option value="normal" selected>عادي</option>
+          <option value="harder">صعب</option>
+          <option value="hardest">خبير</option>
+        </select>
         <span id="streak-text" class="streak-text">🔥 0</span>
         <span id="progress-text" class="progress-text">🏆 0</span>
       </div>
@@ -62,7 +68,7 @@
   <script src="assets/js/storage.js"></script>
   <script src="assets/js/puzzles.js"></script>
   <script src="assets/js/board.js?v=3"></script>
-  <script src="assets/js/game.js?v=4"></script>
+  <script src="assets/js/game.js?v=5"></script>
   <script src="assets/js/main.js"></script>
 </body>
 </html>

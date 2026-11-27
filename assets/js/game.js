@@ -38,6 +38,8 @@ const Game = (() => {
     els.btnReset.addEventListener('click', resetPuzzle);
     els.btnNext.addEventListener('click', fetchPuzzle);
     els.btnNew.addEventListener('click', fetchPuzzle);
+    const diffSelect = document.getElementById('difficulty-select');
+    if (diffSelect) diffSelect.addEventListener('change', fetchPuzzle);
 
     const btnAgain = document.getElementById('btn-play-again');
     if (btnAgain) btnAgain.addEventListener('click', playAgain);
@@ -50,7 +52,7 @@ const Game = (() => {
     els.btnHint.disabled = true;
 
     try {
-      const res = await fetch('https://lichess.org/api/puzzle/next');
+      const res = await fetch('https://lichess.org/api/puzzle/next?difficulty=' + (document.getElementById('difficulty-select')?.value || 'normal'));
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       
